@@ -171,23 +171,25 @@ def dev_handle_mesh_collisions(
 
     query = wp.mesh_query_point(mesh_id, p, params.mesh_max_dist) 
 
-    if query.result and query.sign < 0.0:
+    if  query.result:
 
-        mesh_p = wp.mesh_eval_position(mesh_id, query.face, query.u, query.v)
+        particles.pos[nr] = wp.vec3(0.0, 0.0, 0.0)
 
-        dist = wp.length(mesh_p - p)
+        closest = wp.mesh_eval_position(mesh_id, query.face, query.u, query.v)
 
-        if (dist < params.particle_radius):
+        n = wp.normalize(p - closest) * query.sign
+
+        dist = wp.dot(n, closest - p) + params.particle_radius
+
+        if dist > 0.0:
 
             # position correction
-            n = wp.normalize(mesh_p - p)
-            p += n * (params.particle_radius - dist)
+            p += n * dist
             particles.pos[nr] = p
 
             # velocity correction (inelastic, frictionless)
             vn = wp.dot(particles.vel[nr], n)
             particles.vel[nr] -= n * vn
-
 
 
 class ParticleSolver:
@@ -218,7 +220,7 @@ class ParticleSolver:
         self.params.jacobi_scale = 0.5
         self.params.gravity = wp.vec3(0.0, -10.0, 0.0)   
         self.params.particle_radius = radius
-        self.mesh_max_dist = 5.0 * radius
+        self.params.mesh_max_dist = 5.0 * radius
         
         # hash for particle collisions
 
@@ -292,7 +294,7 @@ class Example:
         mesh = viewer.Mesh()
         dataDir = os.path.dirname(os.path.realpath(__file__)) + os.sep + "data" + os.sep
 
-        mesh.loadObjFile(dataDir + "monkey.obj", dataDir + "monkey.png")
+        mesh.loadObjFile(dataDir + "monkeys.obj", dataDir + "monkeys.png")
         viewer.renderer.addMesh(mesh)
 
         num = 10
